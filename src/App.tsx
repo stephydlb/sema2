@@ -11,12 +11,14 @@ import { motion, AnimatePresence } from "motion/react";
 // Types
 interface Peer {
   id: string;
+  userName?: string;
   connection: RTCPeerConnection;
   stream?: MediaStream;
 }
 
 export default function App() {
   const [view, setView] = useState<"splash" | "guide" | "app" | "dev">("splash");
+  const [userName, setUserName] = useState("");
   const [roomId, setRoomId] = useState("050.25");
   const [isJoined, setIsJoined] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
@@ -43,6 +45,8 @@ export default function App() {
       instruction3: "3. Maintenez le bouton central pour parler.",
       instruction4: "4. Portée optimale: 50 mètres en local.",
       understand: "J'ai compris",
+      enterName: "Entrez votre nom temporaire",
+      namePlaceholder: "e.g. Alpha-7",
       devProfile: "Profil du Développeur",
       goBack: "Retour",
       visitGithub: "Visiter GitHub",
@@ -76,6 +80,8 @@ export default function App() {
       instruction3: "3. Hold the center button to transmit voice.",
       instruction4: "4. Optimal range: 50 meters locally.",
       understand: "I understand",
+      enterName: "Enter your temporary name",
+      namePlaceholder: "e.g. Rogue-One",
       devProfile: "Developer Profile",
       goBack: "Go Back",
       visitGithub: "Visit GitHub",
@@ -121,15 +127,22 @@ export default function App() {
 
     init();
 
-    socket.on("signal", async ({ from, signal }) => {
+    socket.on("signal", async ({ from, signal, userName: peerName }) => {
       const peer = peersRef.current[from];
       if (peer) {
+        if (peerName && !peer.userName) {
+          peer.userName = peerName;
+          setPeers(prev => ({
+            ...prev,
+            [from]: { ...prev[from], userName: peerName }
+          }));
+        }
         try {
           if (signal.type === "offer") {
             await peer.connection.setRemoteDescription(new RTCSessionDescription(signal));
             const answer = await peer.connection.createAnswer();
             await peer.connection.setLocalDescription(answer);
-            socket.emit("signal", { to: from, from: socket.id, signal: answer });
+            socket.emit("signal", { to: from, from: socket.id, signal: answer, userName: localStreamRef.current ? userName : "" });
           } else if (signal.type === "answer") {
             await peer.connection.setRemoteDescription(new RTCSessionDescription(signal));
           } else if (signal.candidate) {
@@ -141,8 +154,8 @@ export default function App() {
       }
     });
 
-    socket.on("user-joined", (userId) => {
-      createPeer(userId, true);
+    socket.on("user-joined", ({ userId, userName: peerName }) => {
+      createPeer(userId, true, peerName);
     });
 
     socket.on("user-left", (userId) => {
@@ -156,7 +169,7 @@ export default function App() {
     };
   }, []);
 
-  const createPeer = useCallback((userId: string, isInitiator: boolean) => {
+  const createPeer = useCallback((userId: string, isInitiator: boolean, peerName?: string) => {
     const configuration = {
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     };
@@ -171,7 +184,7 @@ export default function App() {
 
     connection.onicecandidate = (event) => {
       if (event.candidate) {
-        socket.emit("signal", { to: userId, from: socket.id, signal: event.candidate });
+        socket.emit("signal", { to: userId, from: socket.id, signal: event.candidate, userName });
       }
     };
 
@@ -189,14 +202,14 @@ export default function App() {
     if (isInitiator) {
       connection.createOffer().then(offer => {
         connection.setLocalDescription(offer);
-        socket.emit("signal", { to: userId, from: socket.id, signal: offer });
+        socket.emit("signal", { to: userId, from: socket.id, signal: offer, userName });
       });
     }
 
-    const peerObj = { id: userId, connection };
+    const peerObj = { id: userId, connection, userName: peerName };
     setPeers(prev => ({ ...prev, [userId]: peerObj }));
     peersRef.current[userId] = peerObj;
-  }, []);
+  }, [userName]);
 
   const removePeer = (userId: string) => {
     const peer = peersRef.current[userId];
@@ -239,7 +252,7 @@ export default function App() {
 
   const joinFrequency = () => {
     if (!isJoined) {
-      socket.emit("join-room", roomId);
+      socket.emit("join-room", { roomName: roomId, userName });
       setIsJoined(true);
     } else {
       socket.emit("disconnect-from-room", roomId);
@@ -302,6 +315,16 @@ export default function App() {
             </div>
             
             <div className="space-y-6 text-sm text-[#9CA3AF] font-medium leading-relaxed">
+              <div className="flex flex-col gap-3">
+                 <label className="text-[10px] text-accent font-bold uppercase tracking-widest">{t.enterName}</label>
+                 <input 
+                  type="text" 
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value.substring(0, 12))}
+                  placeholder={t.namePlaceholder}
+                  className="w-full bg-[#252A33] border border-border p-4 rounded-2xl text-white focus:outline-none focus:border-accent/50 transition-colors"
+                 />
+              </div>
               <p className="flex gap-3">
                 <span className="text-accent">01.</span> {t.instruction1}
               </p>
@@ -318,8 +341,9 @@ export default function App() {
           </div>
 
           <button 
-            onClick={() => setView("app")}
-            className="w-full py-4 bg-accent text-card-bg rounded-2xl font-black tracking-widest uppercase hover:bg-accent/90 transition-all active:scale-95"
+            onClick={() => userName.trim() && setView("app")}
+            disabled={!userName.trim()}
+            className="w-full py-4 bg-accent text-card-bg rounded-2xl font-black tracking-widest uppercase hover:bg-accent/90 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t.understand}
           </button>
@@ -480,24 +504,33 @@ export default function App() {
               <>
                 <div className="flex items-center justify-between p-3 bg-[#252A33] rounded-xl border border-border">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xs mono italic">Y</div>
-                    <span className="text-sm font-medium">{t.you}</span>
+                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xs mono italic uppercase">
+                      {userName.charAt(0) || 'Y'}
+                    </div>
+                    <span className="text-sm font-medium">{userName || t.you}</span>
                   </div>
                   <span className={`text-[10px] font-mono ${isTalking ? 'text-accent animate-pulse' : 'text-text-dim'}`}>
                     {isTalking ? t.talking : t.activeStatus}
                   </span>
                 </div>
-                {Object.entries(peers).map(([id]) => (
-                  <div key={id} className="flex items-center justify-between p-3 bg-transparent rounded-xl border border-border/50">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-text-dim/20 flex items-center justify-center text-text-dim font-bold text-xs mono italic">
-                        {id.substring(0, 1).toUpperCase()}
+                {Object.entries(peers).map(([id, p]) => {
+                  const peer = p as Peer;
+                  return (
+                    <div key={id} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${activeSpeaker === id ? 'bg-blue-500/10 border-blue-400/50' : 'bg-transparent border-border/50'}`}>
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs mono italic uppercase ${activeSpeaker === id ? 'bg-blue-400 text-card-bg' : 'bg-text-dim/20 text-text-dim'}`}>
+                          {(peer.userName || 'P').charAt(0)}
+                        </div>
+                        <span className={`text-sm font-medium ${activeSpeaker === id ? 'text-blue-400' : ''}`}>
+                          {peer.userName || `Peer_${id.substring(0, 4)}`}
+                        </span>
                       </div>
-                      <span className="text-sm font-medium">Peer_{id.substring(0, 4)}</span>
+                      {activeSpeaker === id && (
+                        <Volume2 className="w-3 h-3 text-blue-400 animate-pulse" />
+                      )}
                     </div>
-                    <span className="text-[10px] font-mono text-text-dim">12m</span>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-20 text-text-dim/40 border border-dashed border-border rounded-xl">
@@ -567,7 +600,7 @@ export default function App() {
       {/* Hidden Audio Elements */}
       <div className="hidden">
         {Object.keys(peers).map((id) => {
-          const peer = peers[id];
+          const peer = peers[id] as Peer;
           if (!peer.stream) return null;
           return (
             <audio 

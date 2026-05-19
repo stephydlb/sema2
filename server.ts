@@ -23,16 +23,16 @@ async function startServer() {
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
-    socket.on("join-room", (roomName) => {
+    socket.on("join-room", ({ roomName, userName }) => {
       socket.join(roomName);
-      console.log(`User ${socket.id} joined room: ${roomName}`);
+      console.log(`User ${socket.id} (${userName}) joined room: ${roomName}`);
       
       // Notify others in the room
-      socket.to(roomName).emit("user-joined", socket.id);
+      socket.to(roomName).emit("user-joined", { userId: socket.id, userName });
     });
 
-    socket.on("signal", ({ to, from, signal }) => {
-      io.to(to).emit("signal", { from, signal });
+    socket.on("signal", ({ to, from, signal, userName }) => {
+      io.to(to).emit("signal", { from, signal, userName });
     });
 
     socket.on("disconnect-from-room", (roomName) => {
