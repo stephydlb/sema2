@@ -16,6 +16,7 @@ interface Peer {
 }
 
 export default function App() {
+  const [view, setView] = useState<"splash" | "guide" | "app" | "dev">("splash");
   const [roomId, setRoomId] = useState("050.25");
   const [isJoined, setIsJoined] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
@@ -33,6 +34,18 @@ export default function App() {
 
   const t = {
     fr: {
+      welcome: "Bienvenue sur SEMA",
+      tagline: "Communications Locales Sécurisées",
+      getStarted: "Commencer",
+      guideTitle: "Comment utiliser SEMA",
+      instruction1: "1. Choisissez une fréquence identique à celle de vos amis.",
+      instruction2: "2. Cliquez sur 'Initialiser le réseau' pour rejoindre.",
+      instruction3: "3. Maintenez le bouton central pour parler.",
+      instruction4: "4. Portée optimale: 50 mètres en local.",
+      understand: "J'ai compris",
+      devProfile: "Profil du Développeur",
+      goBack: "Retour",
+      visitGithub: "Visiter GitHub",
       online: "En ligne",
       offline: "Hors ligne",
       active: "ACTIF",
@@ -54,6 +67,18 @@ export default function App() {
       changeFreq: "Changer Freq"
     },
     en: {
+      welcome: "Welcome to SEMA",
+      tagline: "Secure Local Communications",
+      getStarted: "Get Started",
+      guideTitle: "How to use SEMA",
+      instruction1: "1. Choose a frequency identical to your friends.",
+      instruction2: "2. Click 'Initialize Mesh' to join the channel.",
+      instruction3: "3. Hold the center button to transmit voice.",
+      instruction4: "4. Optimal range: 50 meters locally.",
+      understand: "I understand",
+      devProfile: "Developer Profile",
+      goBack: "Go Back",
+      visitGithub: "Visit GitHub",
       online: "Online",
       offline: "Offline",
       active: "ACTIVE",
@@ -239,6 +264,118 @@ export default function App() {
     }
   };
 
+  if (view === "splash") {
+    return (
+      <div className="h-full w-full bg-app-bg text-[#E0E0E0] flex items-center justify-center p-4 overflow-hidden select-none">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-[360px] h-[640px] bg-card-bg border border-border rounded-[48px] shadow-2xl overflow-hidden flex flex-col items-center justify-center p-8 text-center"
+        >
+          <Antenna className="w-20 h-20 text-accent mb-6 accent-glow" />
+          <h1 className="text-4xl font-black tracking-tighter text-accent mb-2 accent-glow">SEMA</h1>
+          <p className="text-sm text-text-dim mb-12 font-mono uppercase tracking-[0.2em]">{t.tagline}</p>
+          
+          <button 
+            onClick={() => setView("guide")}
+            className="w-full py-4 bg-accent/10 border border-accent/30 rounded-2xl text-accent font-bold tracking-widest uppercase hover:bg-accent/20 transition-all active:scale-95"
+          >
+            {t.getStarted}
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (view === "guide") {
+    return (
+      <div className="h-full w-full bg-app-bg text-[#E0E0E0] flex items-center justify-center p-4 overflow-hidden select-none">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="w-full max-w-[360px] h-[640px] bg-card-bg border border-border rounded-[48px] shadow-2xl overflow-hidden flex flex-col p-8"
+        >
+          <div className="flex-1 flex flex-col justify-center gap-8">
+            <div className="flex flex-col gap-2">
+               <Shield className="w-10 h-10 text-accent mb-2" />
+               <h2 className="text-2xl font-bold tracking-tight">{t.guideTitle}</h2>
+            </div>
+            
+            <div className="space-y-6 text-sm text-[#9CA3AF] font-medium leading-relaxed">
+              <p className="flex gap-3">
+                <span className="text-accent">01.</span> {t.instruction1}
+              </p>
+              <p className="flex gap-3">
+                <span className="text-accent">02.</span> {t.instruction2}
+              </p>
+              <p className="flex gap-3">
+                <span className="text-accent">03.</span> {t.instruction3}
+              </p>
+              <p className="flex gap-3">
+                <span className="text-accent">04.</span> {t.instruction4}
+              </p>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => setView("app")}
+            className="w-full py-4 bg-accent text-card-bg rounded-2xl font-black tracking-widest uppercase hover:bg-accent/90 transition-all active:scale-95"
+          >
+            {t.understand}
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (view === "dev") {
+    return (
+      <div className="h-full w-full bg-app-bg text-[#E0E0E0] flex items-center justify-center p-4 overflow-hidden select-none">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-[360px] h-[640px] bg-card-bg border border-border rounded-[48px] shadow-2xl overflow-hidden flex flex-col items-center p-8"
+        >
+          <div className="pt-10 flex flex-col items-center text-center flex-1">
+             <div className="w-32 h-32 rounded-full border-2 border-accent p-1 mb-6">
+                <img 
+                  src="https://github.com/stephydlb.png" 
+                  alt="Developer" 
+                  className="w-full h-full rounded-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                  referrerPolicy="no-referrer"
+                />
+             </div>
+             <h2 className="text-2xl font-bold mb-1">stephydlb</h2>
+             <p className="text-accent text-[10px] font-mono uppercase tracking-[0.2em] mb-8">{t.devProfile}</p>
+             
+             <p className="text-sm text-text-dim leading-relaxed px-4">
+                Full-stack developer passionate about building secure, privacy-focused communication tools for the mobile-first generation.
+             </p>
+
+             <div className="mt-12 w-full space-y-3">
+                <a 
+                  href="https://github.com/stephydlb" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-full py-4 bg-border/20 border border-border/50 rounded-2xl flex items-center justify-center gap-3 font-bold hover:bg-border/30 transition-all"
+                >
+                  <Users className="w-5 h-5" />
+                  {t.visitGithub}
+                </a>
+             </div>
+          </div>
+
+          <button 
+            onClick={() => setView("app")}
+            className="mb-8 text-xs font-bold text-text-dim hover:text-white transition-colors"
+          >
+            {t.goBack}
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full bg-app-bg text-[#E0E0E0] flex items-center justify-center p-4 sm:p-8 overflow-hidden select-none">
       {/* Main Device Frame */}
@@ -250,7 +387,7 @@ export default function App() {
         {/* Header Section */}
         <div className="px-8 pt-10 pb-6 flex justify-between items-center">
           <div className="flex flex-col">
-            <h1 className="text-2xl font-bold tracking-tighter text-accent accent-glow">SEMA</h1>
+            <h1 className="text-2xl font-bold tracking-tighter text-accent accent-glow pointer-events-auto cursor-pointer" onClick={() => setView("dev")}>SEMA</h1>
             <span className="text-[10px] text-text-dim font-mono tracking-widest uppercase">v1.0.4 Secure Mesh</span>
           </div>
           <div className="flex items-center space-x-2">
